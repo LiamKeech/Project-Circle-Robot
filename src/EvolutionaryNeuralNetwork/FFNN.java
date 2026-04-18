@@ -3,9 +3,9 @@ package EvolutionaryNeuralNetwork;
 import java.util.Random;
 
 public class FFNN {
-    private static final int INPUT_SIZE = 6;
-    private static final int HIDDEN_SIZE = 12;
-    private static final int OUTPUT_SIZE = 6;
+    private static final int INPUT_SIZE = 2;
+    private static final int HIDDEN_SIZE = 10;
+    private static final int OUTPUT_SIZE = 3;
 
     private double[][] weightsInputHidden;
     private double[][] weightsHiddenOutput;
@@ -65,30 +65,14 @@ public class FFNN {
         return outputLayer;
     }
 
-    // MSE
+    // Plain MSE across all outputs.
     public double calculateError(double[] predicted, double[] actual) {
-        double positionError = 0.0;
-        double velocityError = 0.0;
-
-        // Position Error (Indices 0, 1, 2)
-        for (int i = 0; i < 3; i++) {
+        double sumSquaredError = 0.0;
+        for (int i = 0; i < OUTPUT_SIZE; i++) {
             double diff = predicted[i] - actual[i];
-            positionError += (diff * diff);
+            sumSquaredError += (diff * diff);
         }
-        positionError /= 3.0; // Mean Position Error
-
-        // Velocity Error (Indices 3, 4, 5)
-        for (int i = 3; i < 6; i++) {
-            double diff = predicted[i] - actual[i];
-            velocityError += (diff * diff);
-        }
-        velocityError /= 3.0; // Mean Velocity Error
-
-        // Velocity error is more critical, so we apply a higher weight to it
-        double positionWeight = 1.0;
-        double velocityWeight = 1.0;
-
-        return (positionError * positionWeight) + (velocityError * velocityWeight);
+        return sumSquaredError / OUTPUT_SIZE;
     }
 
     private double sigmoid(double x) {
