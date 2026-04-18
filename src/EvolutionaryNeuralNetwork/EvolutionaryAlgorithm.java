@@ -35,32 +35,25 @@ public class EvolutionaryAlgorithm {
 
     public static Chromosome crossover(Chromosome parent1, Chromosome parent2) {
         Random rand = new Random();
-        Chromosome offspring = new Chromosome();
+        double[] parent1Genes = parent1.getGenes();
+        double[] parent2Genes = parent2.getGenes();
+        Chromosome offspring = Chromosome.createRandom(parent1Genes.length);
+        double[] offspringGenes = offspring.getGenes();
 
-        for (int i = 0; i < Chromosome.numberOfCommands; i++) {
-            offspring.getLeftSpeeds()[i]  = rand.nextBoolean() ? parent1.getLeftSpeeds()[i]  : parent2.getLeftSpeeds()[i];
-            offspring.getRightSpeeds()[i] = rand.nextBoolean() ? parent1.getRightSpeeds()[i] : parent2.getRightSpeeds()[i];
-            offspring.getDurations()[i]   = rand.nextBoolean() ? parent1.getDurations()[i]   : parent2.getDurations()[i];
+        for (int i = 0; i < offspringGenes.length; i++) {
+            offspringGenes[i] = rand.nextBoolean() ? parent1Genes[i] : parent2Genes[i];
         }
         return offspring;
     }
 
     public static void GaussianMutation(Chromosome chromosome, double mutationRate, double mutationStrength) {
         Random rand = new Random();
+        double[] genes = chromosome.getGenes();
 
-        for (int i = 0; i < Chromosome.numberOfCommands; i++) {
+        for (int i = 0; i < genes.length; i++) {
             if (rand.nextDouble() < mutationRate) {
-                int delta = (int)(rand.nextGaussian() * mutationStrength * (Chromosome.MAX_SPEED - Chromosome.MIN_SPEED));
-                chromosome.getLeftSpeeds()[i] = Math.clamp(chromosome.getLeftSpeeds()[i] + delta, Chromosome.MIN_SPEED, Chromosome.MAX_SPEED);
-            }
-            if (rand.nextDouble() < mutationRate) {
-                int delta = (int)(rand.nextGaussian() * mutationStrength * (Chromosome.MAX_SPEED - Chromosome.MIN_SPEED));
-                chromosome.getRightSpeeds()[i] = Math.clamp(chromosome.getRightSpeeds()[i] + delta, Chromosome.MIN_SPEED, Chromosome.MAX_SPEED);
-            }
-            if (rand.nextDouble() < mutationRate) {
-                // Same idea scaled to the time range
-                int delta = (int)(rand.nextGaussian() * mutationStrength * (Chromosome.MAX_TIME - Chromosome.MIN_TIME));
-                chromosome.getDurations()[i] = Math.clamp(chromosome.getDurations()[i] + delta, Chromosome.MIN_TIME, Chromosome.MAX_TIME);
+                double delta = rand.nextGaussian() * mutationStrength;
+                genes[i] = Math.max(-1.0, Math.min(1.0, genes[i] + delta));
             }
         }
     }
