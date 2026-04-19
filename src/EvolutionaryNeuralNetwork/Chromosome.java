@@ -3,18 +3,22 @@ package EvolutionaryNeuralNetwork;
 import java.util.Random;
 
 public class Chromosome {
-    private double[] genes; // FFNN weights flattened to 1D
+    private final double[] genes;
+    private double fitness;
 
-    private double fitness = Double.NEGATIVE_INFINITY;
+    public Chromosome(double[] genes) {
+        this.genes = genes;
+        this.fitness = 0.0;
+    }
 
-    public static Chromosome createRandom(int chromosomeLength) {
-        Chromosome chromosome = new Chromosome();
-        chromosome.genes = new double[chromosomeLength];
+    // Factory method to create a brand new, random brain
+    public static Chromosome createRandom(int length) {
         Random rand = new Random();
-        for (int i = 0; i < chromosomeLength; i++) {
-            chromosome.genes[i] = rand.nextDouble(-1.0, 1.0);
+        double[] randomGenes = new double[length];
+        for (int i = 0; i < length; i++) {
+            randomGenes[i] = rand.nextDouble(-1,1);
         }
-        return chromosome;
+        return new Chromosome(randomGenes);
     }
 
     public double[] getGenes() {

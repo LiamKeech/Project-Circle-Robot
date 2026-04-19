@@ -1,19 +1,19 @@
 package DataHandler;
 
 public class DataPoint {
-    double PosX, PosY, PosZ;
-    double VelX, VelY, VelZ;
+    private final double[] inputs;
+    private final double[] expectedOutputs;
 
-    public DataPoint(double posX, double posY, double posZ, double velX, double velY, double velZ) {
-        PosX = posX;
-        PosY = posY;
-        PosZ = posZ;
-        VelX = velX;
-        VelY = velY;
-        VelZ = velZ;
+    public DataPoint(double x, double y, double normLeft, double normRight, double normDuration) {
+        this.inputs = new double[]{x, y};
+        this.expectedOutputs = new double[]{normLeft, normRight, normDuration};
     }
 
-    public double[] toArray() {
-        return new double[]{PosX, PosY, PosZ, VelX, VelY, VelZ};
+    public double[] getInputs() {
+        return inputs;
+    }
+
+    public double[] getExpectedOutputs() {
+        return expectedOutputs;
     }
 }
