@@ -12,6 +12,8 @@ public class DataLoader {
     private static final double MAX_SPEED = 14000.0;
     private static final double MAX_DURATION = 100.0;
 
+    // Read CSV file, normalise the values for easier evolution in the neural network, and return a list of DataPoints
+
     public static List<DataPoint> loadData(String filePath) {
         List<DataPoint> dataset = new ArrayList<>();
         String line;

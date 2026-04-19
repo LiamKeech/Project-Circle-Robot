@@ -23,6 +23,8 @@ public class Main {
 
     private static final List<String> errorProgress = new ArrayList<>();
 
+    // Loads training data, creates a new NN with random weights, EA loop evaluates fitness of weights, optimises weights, then exports predictions of the best chromosome to CSV
+
     public static void main(String[] args) {
         List<DataPoint> dataPoints = DataLoader.loadData("data/circle_training_data.csv");
 

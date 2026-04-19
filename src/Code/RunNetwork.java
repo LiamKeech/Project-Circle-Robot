@@ -5,6 +5,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 
+//Get speeds from the CSV file, turn it into commands, run it, display it
+
 public class RunNetwork {
     private static final double MAX_SPEED = 14000.0;
     private static final double MAX_DURATION = 100.0;

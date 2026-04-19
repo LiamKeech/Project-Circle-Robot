@@ -7,6 +7,8 @@ public class Chromosome {
     private final double[] genes;
     private double fitness;
 
+    // Represents weights and biases of the FFNN in a single array. Fitness is the error (lower is better).
+
     public Chromosome(double[] genes) {
         this.genes = genes;
         this.fitness = 0.0;
