@@ -1,110 +1,85 @@
 package EvolutionaryNeuralNetwork;
 
-import java.util.Random;
-
 public class FFNN {
-    private static final int INPUT_SIZE = 2;
-    private static final int HIDDEN_SIZE = 10;
-    private static final int OUTPUT_SIZE = 3;
+    private final int numInputs = 2;
+    private final int numHidden = 5;
+    private final int numOutputs = 3;
 
-    private double[][] weightsInputHidden;
-    private double[][] weightsHiddenOutput;
-    private double[] biasHidden;
-    private double[] biasOutput;
+    private double[][] hiddenWeights;
+    private double[] hiddenBiases;
+    private double[][] outputWeights;
+    private double[] outputBiases;
 
     public FFNN() {
-        Random rand = new Random(); // Initialise between -1 and 1
+        hiddenWeights = new double[numInputs][numHidden];
+        hiddenBiases = new double[numHidden];
+        outputWeights = new double[numHidden][numOutputs];
+        outputBiases = new double[numOutputs];
+    }
 
-        weightsInputHidden = new double[HIDDEN_SIZE][INPUT_SIZE];
-        weightsHiddenOutput = new double[OUTPUT_SIZE][HIDDEN_SIZE];
-        biasHidden = new double[HIDDEN_SIZE];
-        biasOutput = new double[OUTPUT_SIZE];
+    public int getChromosomeLength() {
+        return (numInputs * numHidden) + numHidden + (numHidden * numOutputs) + numOutputs;
+    }
 
-        double min = -1.0;
-        double max = 1.0;
+    public void setChromosome(double[] genes) {
+        int index = 0;
 
-        for (int h = 0; h < HIDDEN_SIZE; h++) {
-            biasHidden[h] = rand.nextDouble(min, max);
-
-            for (int i = 0; i < INPUT_SIZE; i++) {
-                weightsInputHidden[h][i] = rand.nextDouble(min, max);
+        // 1. Input to Hidden Weights
+        for (int i = 0; i < numInputs; i++) {
+            for (int j = 0; j < numHidden; j++) {
+                hiddenWeights[i][j] = genes[index++];
             }
         }
-
-        for (int o = 0; o < OUTPUT_SIZE; o++) {
-            biasOutput[o] = rand.nextDouble(min, max);
-
-            for (int h = 0; h < HIDDEN_SIZE; h++) {
-                weightsHiddenOutput[o][h] = rand.nextDouble(min, max);
+        // 2. Hidden Biases
+        for (int j = 0; j < numHidden; j++) {
+            hiddenBiases[j] = genes[index++];
+        }
+        // 3. Hidden to Output Weights
+        for (int i = 0; i < numHidden; i++) {
+            for (int j = 0; j < numOutputs; j++) {
+                outputWeights[i][j] = genes[index++];
             }
+        }
+        // 4. Output Biases
+        for (int j = 0; j < numOutputs; j++) {
+            outputBiases[j] = genes[index++];
         }
     }
 
-    // Forward pass through the network.
-    // Calculate values by multiplying weights and adding biases
-    // Result passed through activation function
     public double[] fire(double[] inputs) {
-        double[] hiddenLayer = new double[HIDDEN_SIZE];
-        for (int h = 0; h < HIDDEN_SIZE; h++) {
-            double sum = biasHidden[h];
-            for (int i = 0; i < INPUT_SIZE; i++) {
-                sum += weightsInputHidden[h][i] * inputs[i];
+        double[] hiddenOutputs = new double[numHidden];
+
+        // Calculate Hidden Layer
+        for (int j = 0; j < numHidden; j++) {
+            double sum = hiddenBiases[j];
+            for (int i = 0; i < numInputs; i++) {
+                sum += inputs[i] * hiddenWeights[i][j];
             }
-            hiddenLayer[h] = sigmoid(sum);
+            hiddenOutputs[j] = sigmoid(sum);
         }
 
-        double[] outputLayer = new double[OUTPUT_SIZE];
-        for (int o = 0; o < OUTPUT_SIZE; o++) {
-            double sum = biasOutput[o];
-            for (int h = 0; h < HIDDEN_SIZE; h++) {
-                sum += weightsHiddenOutput[o][h] * hiddenLayer[h];
+        // Calculate Output Layer
+        double[] finalOutputs = new double[numOutputs];
+        for (int j = 0; j < numOutputs; j++) {
+            double sum = outputBiases[j];
+            for (int i = 0; i < numHidden; i++) {
+                sum += hiddenOutputs[i] * outputWeights[i][j];
             }
-            outputLayer[o] = sum; // Linear activation for output
+            finalOutputs[j] = sigmoid(sum);
         }
-
-        return outputLayer;
+        return finalOutputs;
     }
 
-    // Plain MSE across all outputs.
-    public double calculateError(double[] predicted, double[] actual) {
-        double sumSquaredError = 0.0;
-        for (int i = 0; i < OUTPUT_SIZE; i++) {
-            double diff = predicted[i] - actual[i];
-            sumSquaredError += (diff * diff);
+    public double calculateError(double[] predicted, double[] expected) {
+        double sumSquareError = 0.0;
+        for (int i = 0; i < predicted.length; i++) {
+            double diff = expected[i] - predicted[i];
+            sumSquareError += diff * diff;
         }
-        return sumSquaredError / OUTPUT_SIZE;
+        return sumSquareError / predicted.length;
     }
 
     private double sigmoid(double x) {
         return 1.0 / (1.0 + Math.exp(-x));
-    }
-
-    // EA Methods - Throw everything into 1D array, adjusts weights, rebuild from 1D array
-
-    public int getChromosomeLength() {
-        return (HIDDEN_SIZE * INPUT_SIZE) + HIDDEN_SIZE + (OUTPUT_SIZE * HIDDEN_SIZE) + OUTPUT_SIZE;
-    }
-
-    public void setChromosome(double[] chromosomeGenes) {
-        int idx = 0;
-
-        // 1. Input layer -> Hidden layer weights (2D array)
-        for (int h = 0; h < HIDDEN_SIZE; h++) {
-            System.arraycopy(chromosomeGenes, idx, weightsInputHidden[h], 0, INPUT_SIZE);
-            idx += INPUT_SIZE;
-        }
-
-        // 2. Hidden layer biases
-        System.arraycopy(chromosomeGenes, idx, biasHidden, 0, HIDDEN_SIZE);
-        idx += HIDDEN_SIZE;
-
-        // 3. Hidden layer -> Output layer weights (2D array)
-        for (int o = 0; o < OUTPUT_SIZE; o++) {
-            System.arraycopy(chromosomeGenes, idx, weightsHiddenOutput[o], 0, HIDDEN_SIZE);
-            idx += HIDDEN_SIZE;
-        }
-
-        // 4. Output layer biases
-        System.arraycopy(chromosomeGenes, idx, biasOutput, 0, OUTPUT_SIZE);
     }
 }

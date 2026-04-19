@@ -1,5 +1,6 @@
 package EvolutionaryNeuralNetwork;
 
+import java.util.Arrays;
 import java.util.Random;
 
 public class Chromosome {
@@ -11,7 +12,6 @@ public class Chromosome {
         this.fitness = 0.0;
     }
 
-    // Factory method to create a brand new, random brain
     public static Chromosome createRandom(int length) {
         Random rand = new Random();
         double[] randomGenes = new double[length];
@@ -19,6 +19,10 @@ public class Chromosome {
             randomGenes[i] = rand.nextDouble(-1,1);
         }
         return new Chromosome(randomGenes);
+    }
+
+    public Chromosome deepCopy() {
+        return new Chromosome(Arrays.copyOf(this.genes, this.genes.length));
     }
 
     public double[] getGenes() {

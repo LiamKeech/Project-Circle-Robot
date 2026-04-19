@@ -7,7 +7,7 @@ import java.util.Random;
 public class EvolutionaryAlgorithm {
 
     public static void sortByFitness(Chromosome[] population) {
-        Arrays.sort(population, Comparator.comparingDouble(Chromosome::getFitness).reversed());
+        Arrays.sort(population, Comparator.comparingDouble(Chromosome::getFitness));
     }
 
     public static Chromosome[] elitism(Chromosome[] population, int eliteCount) {
@@ -15,7 +15,7 @@ public class EvolutionaryAlgorithm {
         Chromosome[] elites = new Chromosome[eliteCount];
 
         for (int i = 0; i < eliteCount; i++) {
-            elites[i] = population[i];
+            elites[i] = population[i].deepCopy();
         }
         return elites;
     }
@@ -26,7 +26,7 @@ public class EvolutionaryAlgorithm {
 
         for (int i = 0; i < tournamentSize; i++) {
             Chromosome candidate = population[rand.nextInt(population.length)];
-            if (best == null || candidate.getFitness() > best.getFitness()) {
+            if (best == null || candidate.getFitness() < best.getFitness()) {
                 best = candidate;
             }
         }

@@ -8,6 +8,7 @@ import java.util.List;
 
 public class DataLoader {
 
+    private static final double MAX_POS = 35.0;
     private static final double MAX_SPEED = 14000.0;
     private static final double MAX_DURATION = 100.0;
 
@@ -24,17 +25,15 @@ public class DataLoader {
                 }
 
                 String[] values = line.split(",");
-                if (values.length < 5) continue;
-
-                double x = Double.parseDouble(values[0]);
-                double y = Double.parseDouble(values[1]);
 
                 // NORMALISE
+                double normX = Double.parseDouble(values[0]) / MAX_POS;
+                double normY = Double.parseDouble(values[1]) / MAX_POS;
                 double normLeft = Double.parseDouble(values[2]) / MAX_SPEED;
                 double normRight = Double.parseDouble(values[3]) / MAX_SPEED;
                 double normDuration = Double.parseDouble(values[4]) / MAX_DURATION;
 
-                dataset.add(new DataPoint(x, y, normLeft, normRight, normDuration));
+                dataset.add(new DataPoint(normX, normY, normLeft, normRight, normDuration));
             }
         } catch (IOException e) {
             System.err.println("Error reading CSV file: " + e.getMessage());
