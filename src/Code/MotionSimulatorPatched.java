@@ -29,11 +29,7 @@ public class MotionSimulatorPatched
 		// Fix for angular drift when attempting to go in a straight line
 		double tcorrection = (NN[2] + NNAlt[2]) / 2;
 
-//			 Fix for robot drift
-		if(Math.abs(delxN + delyN) < 0.55) {
-			delxN = 0;
-			delyN = 0;
-		}
+
 
 		globalx += delxN;
 		globaly += delyN;
@@ -77,11 +73,7 @@ public class MotionSimulatorPatched
 			// Fix for angular drift when attempting to go in a straight line
             double tcorrection = (NN[2] + NNAlt[2]) / 2;
 
-			//Fix for robot drift
-			if(Math.abs(delxN + delyN) < 0.55) {
-				delxN = 0;
-				delyN = 0;
-			}
+
 
             globalx += delxN;
             globaly += delyN;

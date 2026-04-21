@@ -2,9 +2,9 @@ package Code;
 
 import DataHandler.DataLoader;
 import DataHandler.DataPoint;
-import EvolutionaryNeuralNetwork.Chromosome;
-import EvolutionaryNeuralNetwork.EvolutionaryAlgorithm;
-import EvolutionaryNeuralNetwork.FFNN;
+import EvolutionaryRobotics.Chromosome;
+import EvolutionaryRobotics.EvolutionaryAlgorithm;
+import EvolutionaryRobotics.FFNN;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -26,7 +26,7 @@ public class Main {
     // Loads training data, creates a new NN with random weights, EA loop evaluates fitness of weights, optimises weights, then exports predictions of the best chromosome to CSV
 
     public static void main(String[] args) {
-        List<DataPoint> dataPoints = DataLoader.loadData("data/circle_training_data.csv");
+        List<DataPoint> dataPoints = DataLoader.loadData("data/circle_training_data.csv"); //inputs & expected outputs
 
         FFNN ffnn = new FFNN();
         Chromosome[] population = new Chromosome[POPULATION_SIZE];
@@ -122,13 +122,4 @@ public class Main {
 
         System.out.printf("Final MSE over dataset: %.6f%n", totalMSE / data.size());
     }
-
-//    private static void exportErrorToCSV() throws IOException {
-//        try (PrintWriter writer = new PrintWriter(new FileWriter("data/learning_curve.csv"))) {
-//            writer.println("Generation,BestFitness");
-//            for (String line : errorProgress) {
-//                writer.println(line);
-//            }
-//        }
-//    }
 }

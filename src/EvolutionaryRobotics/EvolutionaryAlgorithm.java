@@ -1,4 +1,4 @@
-package EvolutionaryNeuralNetwork;
+package EvolutionaryRobotics;
 
 import java.util.Arrays;
 import java.util.Comparator;

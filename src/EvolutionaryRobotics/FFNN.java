@@ -1,4 +1,4 @@
-package EvolutionaryNeuralNetwork;
+package EvolutionaryRobotics;
 
 public class FFNN {
     private final int numInputs = 2;

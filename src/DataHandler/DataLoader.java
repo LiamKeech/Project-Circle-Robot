@@ -8,10 +8,12 @@ import java.util.List;
 
 public class DataLoader {
 
+    // Normalisation constants make it safe to scale between 0 and 1
     private static final double MAX_POS = 35.0;
     private static final double MAX_SPEED = 14000.0;
     private static final double MAX_DURATION = 100.0;
 
+    // Procedurally generated training data, takes -20, 20 and calculates new positions to go around a circle
     // Read CSV file, normalise the values for easier evolution in the neural network, and return a list of DataPoints
 
     public static List<DataPoint> loadData(String filePath) {
