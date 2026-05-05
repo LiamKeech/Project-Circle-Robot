@@ -5,10 +5,10 @@ public class FFNN {
     private final int numHidden = 5;
     private final int numOutputs = 3;
 
-    private double[][] hiddenWeights;
-    private double[] hiddenBiases;
-    private double[][] outputWeights;
-    private double[] outputBiases;
+    private final double[][] hiddenWeights;
+    private final double[] hiddenBiases;
+    private final double[][] outputWeights;
+    private final double[] outputBiases;
 
     public FFNN() {
         hiddenWeights = new double[numInputs][numHidden];
