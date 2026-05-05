@@ -35,6 +35,7 @@ public class Command
 //        this.timestamp = timestamp;
 //    }
 
+    @Override
     public String toString()
     {
         return "D,l" + left + ",l" + right + "\n";
