@@ -12,11 +12,11 @@ The neuroevolution system joins two pre-existing subsystems that were previously
 
 | Subsystem | Origin | Role in Neuroevolution |
 |---|---|---|
-| `FFNN` | `src/EvolutionaryRobotics/FFNN.java` | The controller — maps (x, y) → (leftSpeed, rightSpeed, time) |
-| `Chromosome` | `src/EvolutionaryRobotics/Chromosome.java` | Genome — a flat `double[]` of all NN weights and biases |
-| `EvolutionaryAlgorithm` | `src/EvolutionaryRobotics/EvolutionaryAlgorithm.java` | GA operators — selection, crossover, mutation, elitism |
-| `KheperaSimulator` | `src/Code/KheperaSimulator.java` | Physics — executes commands and returns robot states |
-| Fitness Functions | `Code/DistanceScaledFitnessFunction.java` etc. | Scoring — rewards circular clockwise traversal |
+| `FFNN` | `src/fitness/FFNN.java` | The controller — maps (x, y) → (leftSpeed, rightSpeed, time) |
+| `Chromosome` | `src/fitness/Chromosome.java` | Genome — a flat `double[]` of all NN weights and biases |
+| `EvolutionaryAlgorithm` | `src/fitness/EvolutionaryAlgorithm.java` | GA operators — selection, crossover, mutation, elitism |
+| `KheperaSimulator` | `src/simulator/KheperaSimulator.java` | Physics — executes commands and returns robot states |
+| Fitness Functions | `simulator/DistanceScaledFitnessFunction.java` etc. | Scoring — rewards circular clockwise traversal |
 
 The key design decision is that fitness is **behavioural, not supervised**. The FFNN is never trained against a target dataset; instead, its weights are shaped purely by how well the robot traverses a circle in simulation.
 
@@ -196,7 +196,7 @@ given: chromosome (33 genes), N (number of steps)
 6.  chromosome.setFitness(fitness)
 ```
 
-Speed clamping constants (from `Code/Chromosome.java`):
+Speed clamping constants (from `simulator/Chromosome.java`):
 - `MIN_SPEED = 8000`, `MAX_SPEED = 17500`
 - `MIN_TIME = 300`, `MAX_TIME = 3100`
 
@@ -292,12 +292,12 @@ Display via VisualFrame
 | Component | Action | Notes |
 |---|---|---|
 | `FFNN.java` | **Reuse as-is** | Already correct architecture (2 in, 5 hidden, 3 out) |
-| `Chromosome.java` (EvolutionaryRobotics) | **Reuse as-is** | Genome = 33 real-valued genes |
-| `EvolutionaryAlgorithm.java` (EvolutionaryRobotics) | **Reuse as-is** | All operators already implemented |
+| `Chromosome.java` (fitness) | **Reuse as-is** | Genome = 33 real-valued genes |
+| `EvolutionaryAlgorithm.java` (fitness) | **Reuse as-is** | All operators already implemented |
 | `DistanceScaledFitnessFunction.java` | **Reuse as-is** | Core scoring logic, no changes needed |
 | `KheperaSimulator.java` | **Reuse as-is** | Instantiate fresh per individual |
-| `Code/Main.java` | **Adapt** | Replace `Chromosome.createCommands()` with FFNN N-step loop |
-| `Code/Chromosome.java` | **Do not use** | This encodes raw commands, not NN weights |
+| `simulator/Main.java` | **Adapt** | Replace `Chromosome.createCommands()` with FFNN N-step loop |
+| `simulator/Chromosome.java` | **Do not use** | This encodes raw commands, not NN weights |
 | `DataLoader` / `predicted_outputs.csv` | **Not needed** | Neuroevolution does not use supervised training data |
 | `VisualFrame.java` | **Reuse as-is** | Visualise best individual's trajectory after evolution |
 
@@ -305,7 +305,7 @@ Display via VisualFrame
 
 ## Key Differences from the Previous Systems
 
-| Aspect | Supervised NN (`src/Code/Main.java`) | Direct GA (`Code/Main.java`) | Neuroevolution (this system) |
+| Aspect | Supervised NN (`src/simulator/Main.java`) | Direct GA (`simulator/Main.java`) | Neuroevolution (this system) |
 |---|---|---|---|
 | What evolves | NN weights (to minimise MSE) | Raw motor commands | NN weights (to maximise fitness) |
 | Fitness signal | Mean squared error vs. CSV data | Behavioural (grid traversal) | Behavioural (grid traversal) |

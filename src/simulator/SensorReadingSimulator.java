@@ -1,4 +1,4 @@
-package Code;
+package simulator;
 
 import javafx.util.Pair;
 import org.encog.neural.networks.BasicNetwork;

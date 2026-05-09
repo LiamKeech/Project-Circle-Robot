@@ -1,4 +1,4 @@
-package Code;
+package simulator;
 
 public class State {
 	public double sx;

@@ -1,7 +1,7 @@
-package EvolutionaryRobotics;
+package fitness;
 
-import Code.GridCellMap;
-import Code.KheperaState;
+import simulator.GridCellMap;
+import simulator.KheperaState;
 
 import java.util.ArrayList;
 

@@ -1,4 +1,4 @@
-package Code;
+package simulator;
 
 public class GridCellMap {
     public static final double GRID_WIDTH = 30.0;

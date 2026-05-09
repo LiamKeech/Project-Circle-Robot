@@ -1,4 +1,4 @@
-package Code;
+package simulator;
 
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.persist.EncogDirectoryPersistence;

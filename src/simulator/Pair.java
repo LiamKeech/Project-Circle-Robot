@@ -1,4 +1,4 @@
-package Code;
+package simulator;
 
 public class Pair<A,B> {
     private A a;

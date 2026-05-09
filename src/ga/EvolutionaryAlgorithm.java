@@ -1,4 +1,4 @@
-package EvolutionaryRobotics;
+package ga;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -7,7 +7,7 @@ import java.util.Random;
 public class EvolutionaryAlgorithm {
 
     public static void sortByFitness(Chromosome[] population) {
-        Arrays.sort(population, Comparator.comparingDouble(Chromosome::getFitness));
+        Arrays.sort(population, Comparator.comparingDouble(Chromosome::getFitness).reversed());
     }
 
     public static Chromosome[] elitism(Chromosome[] population, int eliteCount) {
@@ -26,7 +26,7 @@ public class EvolutionaryAlgorithm {
 
         for (int i = 0; i < tournamentSize; i++) {
             Chromosome candidate = population[rand.nextInt(population.length)];
-            if (best == null || candidate.getFitness() < best.getFitness()) {
+            if (best == null || candidate.getFitness() > best.getFitness()) {
                 best = candidate;
             }
         }

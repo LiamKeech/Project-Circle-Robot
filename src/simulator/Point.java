@@ -1,4 +1,4 @@
-package Code;
+package simulator;
 
 public class Point {
 	public double x;

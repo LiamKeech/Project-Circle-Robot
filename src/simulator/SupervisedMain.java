@@ -1,14 +1,13 @@
-package Code;
+package simulator;
 
-import EvolutionaryRobotics.Chromosome;
-import EvolutionaryRobotics.EvolutionaryAlgorithm;
-import EvolutionaryRobotics.FFNN;
+import ga.Chromosome;
+import ga.EvolutionaryAlgorithm;
+import nn.FFNN;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
-public class Main {
+public class SupervisedMain {
     private static final int POPULATION_SIZE = 200;
     private static final int GENERATIONS = 1000;
     private static final int ELITE_COUNT = 1;

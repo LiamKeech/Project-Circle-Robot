@@ -1,4 +1,4 @@
-package EvolutionaryRobotics;
+package ga;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -7,7 +7,7 @@ public class Chromosome {
     private final double[] genes;
     private double fitness;
 
-    // Represents weights and biases of the FFNN in a single array. Fitness is the error (lower is better).
+    // Represents weights and biases of the FFNN in a single array. Fitness is a score (higher is better).
 
     public Chromosome(double[] genes) {
         this.genes = genes;
