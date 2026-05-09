@@ -1,4 +1,7 @@
-package Code;
+package EvolutionaryRobotics;
+
+import Code.GridCellMap;
+import Code.KheperaState;
 
 import java.util.ArrayList;
 

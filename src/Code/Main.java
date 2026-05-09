@@ -1,14 +1,9 @@
 package Code;
 
-import DataHandler.DataLoader;
-import DataHandler.DataPoint;
 import EvolutionaryRobotics.Chromosome;
 import EvolutionaryRobotics.EvolutionaryAlgorithm;
 import EvolutionaryRobotics.FFNN;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -23,10 +18,8 @@ public class Main {
 
     private static final List<String> errorProgress = new ArrayList<>();
 
-    // Loads training data, creates a new NN with random weights, EA loop evaluates fitness of weights, optimises weights, then exports predictions of the best chromosome to CSV
 
     public static void main(String[] args) {
-        List<DataPoint> dataPoints = DataLoader.loadData("data/circle_training_data.csv"); //inputs & expected outputs
 
         FFNN ffnn = new FFNN();
         Chromosome[] population = new Chromosome[POPULATION_SIZE];
@@ -38,7 +31,7 @@ public class Main {
         for (int gen = 0; gen < GENERATIONS; gen++) {
 
             for (Chromosome chromosome : population) {
-                double fitness = evaluateFitness(chromosome, ffnn, dataPoints);
+                double fitness = 0;
                 chromosome.setFitness(fitness);
             }
 
@@ -53,18 +46,12 @@ public class Main {
         }
         // Re-evaluate after the EA loop to find the best
         for (Chromosome chromosome : population) {
-            chromosome.setFitness(evaluateFitness(chromosome, ffnn, dataPoints));
+            //chromosome.setFitness();
         }
         EvolutionaryAlgorithm.sortByFitness(population);
 
         Chromosome best = population[0];
         ffnn.setChromosome(best.getGenes());
-
-        try {
-            exportPredictionsToCSV(best, dataPoints, ffnn, "data/predicted_outputs.csv");
-        } catch (IOException e) {
-            System.err.println("Export failed: " + e.getMessage());
-        }
 
         System.out.println("Best Chromosome Fitness: " + population[0].getFitness());
     }
@@ -88,38 +75,5 @@ public class Main {
         }
 
         return nextGen;
-    }
-
-    public static double evaluateFitness(Chromosome chromosome, FFNN ffnn, List<DataPoint> dataPoints) {
-        ffnn.setChromosome(chromosome.getGenes());
-        double MSE = 0.0;
-
-        for (DataPoint point : dataPoints) {
-            double[] predictedOutputs = ffnn.fire(point.getInputs());
-            MSE += ffnn.calculateError(predictedOutputs, point.getExpectedOutputs());
-        }
-
-        return MSE;
-    }
-
-    private static void exportPredictionsToCSV(Chromosome best, List<DataPoint> data,
-                                               FFNN ffnn, String filename) throws IOException {
-        ffnn.setChromosome(best.getGenes());
-        double totalMSE = 0.0;
-
-        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
-            writer.println("NormX,NormY,PredLeft,PredRight,PredDuration,ActLeft,ActRight,ActDuration");
-
-            for (DataPoint point : data) {
-                double[] predicted = ffnn.fire(point.getInputs());
-                double[] actual = point.getExpectedOutputs();
-
-                totalMSE += ffnn.calculateError(predicted, actual);
-
-                writer.printf(Locale.US, "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f%n", point.getInputs()[0], point.getInputs()[1], predicted[0], predicted[1], predicted[2], actual[0],    actual[1],    actual[2]);
-            }
-        }
-
-        System.out.printf("Final MSE over dataset: %.6f%n", totalMSE / data.size());
     }
 }
