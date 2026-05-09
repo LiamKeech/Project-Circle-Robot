@@ -1,189 +1,316 @@
-Project Title & Abstract
+# Project Overview: Neuroevolution for Khepera Circle Behaviour
 
-**Khepera Circle — Evolutionary Neural Control for a Simulated Khepera Robot**
+## Abstract
 
-Abstract
--------
-This repository implements a physics-lite simulator for a Khepera-style differential-drive robot together with a compact feedforward neural network (FFNN) controller and a simple evolutionary algorithm (EA) for evolving network parameters (weights and biases). The project is organized to support two complementary workflows:
+This project implements a **neuroevolution** system that evolves the weights of a feedforward neural network (FFNN) to control a simulated Khepera differential-drive robot. The goal is for the robot to drive in a circle, rewarded through a behavioural fitness function rather than supervised error. The genetic algorithm (GA) treats every set of FFNN weights as a chromosome. Each individual is evaluated by running the robot inside `KheperaSimulator` for a fixed number of steps (N), where the FFNN fires once per step to produce a motor command. The resulting trajectory is then scored by the fitness function, and the best individuals are carried forward into the next generation.
 
-- Evolve networks by encoding an entire FFNN as a single linear chromosome of real-valued genes, then using selection, crossover, and Gaussian mutation to minimize a supervised error or behavioral fitness.
-- Run trained networks (from Encog `.eg` persistence files) to produce next-state predictions that can drive the simulator.
+---
 
-The system is primarily academic: it demonstrates genotype→phenotype mapping (linear arrays → network parameters), fitness-based selection, and closed-loop evaluation of control policies in a simulated environment with sensors, collision checks, and a visualizer.
+## System Architecture
 
-**Key goals**: evolve controllers that produce wheel speed commands to trace circular trajectories; provide utilities to train, persist, load, and execute networks; and provide CSV-based data handling for training / prediction workflows.
+The neuroevolution system joins two pre-existing subsystems that were previously separate:
 
-**Primary languages and frameworks**: Java 8+, with optional Encog (encog-core-3.4.jar) for persistence and pretrained networks.
+| Subsystem | Origin | Role in Neuroevolution |
+|---|---|---|
+| `FFNN` | `src/EvolutionaryRobotics/FFNN.java` | The controller — maps (x, y) → (leftSpeed, rightSpeed, time) |
+| `Chromosome` | `src/EvolutionaryRobotics/Chromosome.java` | Genome — a flat `double[]` of all NN weights and biases |
+| `EvolutionaryAlgorithm` | `src/EvolutionaryRobotics/EvolutionaryAlgorithm.java` | GA operators — selection, crossover, mutation, elitism |
+| `KheperaSimulator` | `src/Code/KheperaSimulator.java` | Physics — executes commands and returns robot states |
+| Fitness Functions | `Code/DistanceScaledFitnessFunction.java` etc. | Scoring — rewards circular clockwise traversal |
 
-**Architecture & Design**
+The key design decision is that fitness is **behavioural, not supervised**. The FFNN is never trained against a target dataset; instead, its weights are shaped purely by how well the robot traverses a circle in simulation.
 
-High-level architecture
------------------------
-The project separates concerns into three dominant layers:
+---
 
-1. Simulator & IO (physics, sensors, visualization)
-   - Responsible for representing robot and world state, applying motor commands, and producing sensor observations.
-2. Control / Model (FFNN, Encog networks)
-   - Implements the phenotype: feedforward neural networks that map sensor/command inputs to outputs (either motor commands or delta-state predictions).
-3. Evolutionary algorithm & data handling
-   - Implements genotype operations (creation, crossover, mutation, selection) and dataset parsing for supervised fitness evaluation.
+## Component Descriptions
 
-Interaction flow
-----------------
-- A run/evaluation begins with a `Chromosome` (genotype): a 1‑D array of doubles representing every weight and bias in a `FFNN`.
-- The EA constructs candidate populations of `Chromosome` instances and maps each to an `FFNN` with `setChromosome(...)`.
-- Each `FFNN` is executed (fired) against input vectors (from training data or simulated sensor readings) to compute outputs; a per-sample error is computed with `calculateError(...)` and aggregated into a fitness score stored on the `Chromosome`.
-- Evolutionary operators (`tournamentSelect`, `crossover`, `GaussianMutation`, `elitism`) produce the next generation.
-- Trained networks can be persisted via Encog or used directly to generate `predicted_outputs.csv`, which `RunNetwork` can load and feed to `KheperaSimulator` for visualization.
+### `FFNN.java` — The Neural Network Controller
 
-Design patterns and modularity
------------------------------
-- Genotype/Phenotype mapping: `Chromosome` ⇄ `FFNN` is explicit and single-responsibility: the chromosome stores genes; `FFNN` consumes a gene array and maps values into weight/bias matrices.
-- Strategy-like separation of motion and sensing: `MotionSimulatorPatched` computes kinematic updates; `SensorReadingSimulator` computes distance readings and line sensors. `KheperaSimulator` orchestrates the two to produce `KheperaState` snapshots.
-- File-based persistence / dataflow: CSV loaders and Encog persistence are used for interchange formats, enabling offline training, evaluation, and visualization.
+The FFNN is a compact three-layer feedforward network with fixed architecture:
 
-Directory & File Breakdown
+- **Input layer:** 2 nodes — normalised `x` and `y` position of the robot
+- **Hidden layer:** 5 nodes with sigmoid activation
+- **Output layer:** 3 nodes with sigmoid activation — normalised `leftSpeed`, `rightSpeed`, and `time` (command duration)
 
-Repository tree (abridged)
+**Forward pass:**
+
+Given input vector **x** ∈ ℝ²:
+
+1. Hidden pre-activations: `h_j = bias_j + Σ x_i · w_ih[i][j]`
+2. Hidden activations: `z_j = sigmoid(h_j)`
+3. Output pre-activations: `o_k = bias_k + Σ z_j · w_ho[j][k]`
+4. Output activations: `y_k = sigmoid(o_k)`
+
+All outputs are in (0, 1) due to sigmoid. They are denormalised before being passed to the simulator:
+- `leftSpeed = y[0] × MAX_SPEED` (where MAX_SPEED = 14000)
+- `rightSpeed = y[1] × MAX_SPEED`
+- `time = y[2] × MAX_DURATION` (where MAX_DURATION = 100ms, clamped to simulator limits)
+
+**Genome layout (`setChromosome`):**
+
+The chromosome is consumed sequentially to populate the network:
 
 ```
-KheperaCircleNN/
-├─ data/
-│  ├─ circle_training_data.csv
-│  ├─ learning_curve.csv
-│  └─ predicted_outputs.csv
-├─ docs/
-│  └─ project_overview.md
-├─ src/
-│  ├─ Code/
-│  │  ├─ KheperaSimulator.java
-│  │  ├─ KheperaState.java
-│  │  ├─ MotionSimulatorPatched.java
-│  │  ├─ SensorReadingSimulator.java
-│  │  ├─ RunNetwork.java
-│  │  ├─ NNSim.java
-│  │  ├─ VisualFrame.java
-│  │  └─ (other UI / helper classes)
-│  ├─ DataHandler/
-│  │  ├─ DataLoader.java
-│  │  └─ DataPoint.java
-│  └─ EvolutionaryRobotics/
-│     ├─ Chromosome.java
-│     ├─ EvolutionaryAlgorithm.java
-│     └─ FFNN.java
-└─ lib/
-   └─ encog-core-3.4.jar (expected runtime dependency)
+Index range        Contents
+0 .. (2×5)-1       Input-to-hidden weights [input][hidden]
+10 .. 14           Hidden biases [hidden]
+15 .. 29           Hidden-to-output weights [hidden][output]
+30 .. 32           Output biases [output]
 ```
 
-Key files and responsibilities
--------------------------------
-- `src/Code/KheperaSimulator.java` ([src/Code/KheperaSimulator.java](src/Code/KheperaSimulator.java)) — Orchestrator for simulation episodes. Maintains world obstacles, a start `State`, and a list of `Command`s. Uses `MotionSimulatorPatched` to propagate kinematics and `SensorReadingSimulator` to produce sensor arrays. Produces `KheperaState` snapshots containing both position and sensor readings for each executed command.
+Total chromosome length: `(2×5) + 5 + (5×3) + 3 = 33 genes`
 
-- `src/EvolutionaryRobotics/FFNN.java` ([src/EvolutionaryRobotics/FFNN.java](src/EvolutionaryRobotics/FFNN.java)) — Compact feedforward neural network implementation with a fixed architecture: 2 inputs, 5 hidden neurons, and 3 outputs. Provides methods to compute the chromosome length (`getChromosomeLength()`), map a linear gene array into weight and bias matrices (`setChromosome(...)`), evaluate the network (`fire(...)`), and compute mean squared error (`calculateError(...)`). Activation function: logistic sigmoid $\\sigma(x)=1/(1+e^{-x})$.
+---
 
-- `src/EvolutionaryRobotics/Chromosome.java` ([src/EvolutionaryRobotics/Chromosome.java](src/EvolutionaryRobotics/Chromosome.java)) — Simple container for a `double[] genes` and `fitness` scalar. Provides factory `createRandom(int)` to initialize genes uniformly in $[-1,1]$, getter/setter for fitness, and `deepCopy()` utility used for elitism.
+### `Chromosome.java` — The Genome
 
-- `src/EvolutionaryRobotics/EvolutionaryAlgorithm.java` ([src/EvolutionaryRobotics/EvolutionaryAlgorithm.java](src/EvolutionaryRobotics/EvolutionaryAlgorithm.java)) — Implements core EA operators:
-  - `sortByFitness(...)` — ascending fitness (lower is better) sort.
-  - `elitism(...)` — copies top-N chromosomes into next generation via `deepCopy()`.
-  - `tournamentSelect(...)` — selects the best of `tournamentSize` randomly sampled candidates.
-  - `crossover(...)` — uniform crossover producing an offspring by selecting each gene from one of two parents at random.
-  - `GaussianMutation(...)` — per-gene mutation with probability `mutationRate`, adding `N(0, mutationStrength^2)` and clamping genes to $[-1,1]$.
+A `Chromosome` wraps a `double[] genes` array of length 33 (the full weight/bias set of the FFNN) and a scalar `fitness` value.
 
-- `src/DataHandler/DataLoader.java` ([src/DataHandler/DataLoader.java](src/DataHandler/DataLoader.java)) — CSV reader for training/prediction data. Reads rows (skipping header), parses `(x, y, left, right, duration)` and normalizes them with constants `MAX_POS`, `MAX_SPEED`, `MAX_DURATION` into a `DataPoint` list used for supervised training/evaluation.
+Key methods:
 
-- `src/Code/RunNetwork.java` ([src/Code/RunNetwork.java](src/Code/RunNetwork.java)) — Example runner that reads `data/predicted_outputs.csv`, denormalizes wheel speeds and duration back to physical integers and dispatches the resulting `Command` sequence to a `KheperaSimulator` to produce a visual path using `VisualFrame`.
+- `createRandom(int length)` — initialises all genes uniformly in `[-1, 1]` using `Random.nextDouble(-1, 1)`
+- `deepCopy()` — produces a fully independent copy via `Arrays.copyOf`, used by elitism so the original is not modified
+- `setFitness(double)` / `getFitness()` — fitness is stored in the chromosome so the GA can sort by it
 
-- `src/Code/NNSim.java` ([src/Code/NNSim.java](src/Code/NNSim.java)) — Utility that loads three Encog serialized networks (`NNxuse.eg`, `NNyuse.eg`, `NNtuse.eg`) and uses them to compute 3 scalar deltas that are scaled into physical displacements. Demonstrates an orthogonal workflow where Encog-trained networks produce deltas instead of the custom `FFNN` genotype.
+In the neuroevolution context, genes are continuous real values and no clamping to speed/time units is needed here (that happens when the FFNN output is denormalised at evaluation time).
 
-Core Mechanics & Algorithms
+---
 
-1) Genotype → Phenotype mapping (FFNN and `Chromosome`)
-------------------------------------------------------
-The `FFNN` uses the following architecture constants: `numInputs = 2`, `numHidden = 5`, `numOutputs = 3`. The gene vector layout used by `FFNN.setChromosome(double[] genes)` is:
+### `EvolutionaryAlgorithm.java` — The GA Operators
 
-1. Input-to-hidden weights: `numInputs * numHidden` (matrix indexed `[input][hidden]`)
-2. Hidden biases: `numHidden` (vector indexed by hidden neuron)
-3. Hidden-to-output weights: `numHidden * numOutputs` (matrix indexed `[hidden][output]`)
-4. Output biases: `numOutputs` (vector indexed by output neuron)
+All evolutionary operators work on `Chromosome[]` arrays. Fitness is **maximised** (higher is better), consistent with the reward-based fitness functions.
 
-The total chromosome length is therefore:
+**`sortByFitness`**
+Sorts the population in descending order of fitness using `Comparator.comparingDouble(...).reversed()`. This places the best individuals at index 0.
 
-$$L = n_{in} \\cdot n_{hid} + n_{hid} + n_{hid} \\cdot n_{out} + n_{out}$$
+**`elitism(population, eliteCount)`**
+Selects the top `eliteCount` chromosomes (already sorted) and returns `deepCopy()` instances. This guarantees the best solution found so far cannot be lost to crossover or mutation.
 
-For the constants in this project: $L = 2\\cdot5 + 5 + 5\\cdot3 + 3 = 10 + 5 + 15 + 3 = 33$ genes.
+**`tournamentSelect(population, tournamentSize)`**
+Randomly samples `tournamentSize` candidates from the population and returns the one with the highest fitness. A larger tournament size increases selection pressure (fewer weak individuals survive).
 
-When `setChromosome(...)` is called, the code sequentially consumes genes and populates the internal arrays `hiddenWeights`, `hiddenBiases`, `outputWeights`, and `outputBiases` in row-major order matching the network topology.
+**`crossover(parent1, parent2)`**
+Performs uniform crossover: for each of the 33 gene positions, the offspring independently takes the gene from `parent1` or `parent2` with 50% probability. This produces a single offspring per call.
 
-2) Forward pass / activation
-----------------------------
-Given an input vector $x\\in\\mathbb{R}^{n_{in}}$, the network computes hidden pre-activations:
+**`GaussianMutation(chromosome, mutationRate, mutationStrength)`**
+Iterates over each gene. With probability `mutationRate`, a perturbation drawn from `N(0, mutationStrength²)` is added to the gene. The result is clamped to `[-1, 1]` to keep weights in a stable range.
 
-$$h_j = b^{(h)}_j + \\sum_{i=1}^{n_{in}} x_i \\cdot w^{(ih)}_{i,j}$$
+---
 
-Hidden activations use the logistic sigmoid $\\sigma$: $z_j = \\sigma(h_j)$. Output pre-activations and activations are computed similarly:
+### Fitness Functions — Behavioural Scoring
 
-$$o_k = b^{(o)}_k + \\sum_{j=1}^{n_{hid}} z_j \\cdot w^{(ho)}_{j,k}, \\quad y_k = \\sigma(o_k).$$
+Three fitness functions are available, all operating on an `ArrayList<KheperaState>` trajectory produced by the simulator. All use the same **clockwise 3×3 grid traversal** concept and are **maximisation** objectives (higher = better).
 
-`FFNN.fire(...)` returns `y \\in \\mathbb{R}^{n_{out}}`.
+The arena is divided into a 3×3 grid of cells (each cell ≈ 20×20 units), identified by IDs 0–8, with cell 4 being the centre. The target clockwise order is: `{0, 1, 2, 5, 8, 7, 6, 3, 0}`.
 
-3) Error metric and fitness
----------------------------
-`FFNN.calculateError(predicted, expected)` computes per-sample mean squared error (MSE):
+---
 
-$$\\text{MSE} = \\frac{1}{m} \\sum_{i=1}^m (t_i - y_i)^2$$
+#### `DistanceScaledFitnessFunction` *(recommended for neuroevolution)*
 
-The project uses this MSE as the fitness measure in a minimization sense (lower is better). During EA evaluation each `Chromosome` is mapped to an `FFNN` and run on one or more training examples; the sample-wise MSEs are aggregated (sum or mean depending on the evaluation harness) and assigned to `chromosome.setFitness(...)`.
+Rewards the robot for visiting grid cells in the correct clockwise order, penalises it for entering the centre cell (ID 4) or leaving the grid entirely.
 
-4) Evolutionary loop
----------------------
-Typical EA iteration uses the following steps (matchers in `EvolutionaryAlgorithm`):
+```
+For each state in trajectory:
+  if outside grid:       fitness -= outsidePenalty × (1 + distanceOutside / gridWidth)
+  if in centre cell:     fitness -= centrePenalty  × (1 - distanceToCentre / cellWidth)
+  if correct next cell:  fitness += cellReward
+                         nextCellIdx++
+  if full traversal:     fitness += traversalReward; return early
+```
 
-- Evaluate current population: compute fitness for each `Chromosome`.
-- Elitism: `elitism(population, eliteCount)` selects top `eliteCount` chromosomes (lowest fitness) and carries exact `deepCopy()` copies into the next population.
-- Offspring generation: repeatedly use `tournamentSelect(population, tournamentSize)` to select parents, apply `crossover(parent1,parent2)` to create offspring, then apply `GaussianMutation(offspring, mutationRate, mutationStrength)`.
-- Replacement: combine elites + offspring to form new population; sort by fitness for bookkeeping.
+Constants: `cellReward = 20`, `traversalReward = 300`, `centrePenalty = 25`, `outsidePenalty = 50`.
+Maximum possible score: `(9 × 20) + 300 = 480`.
 
-Operator specifics implemented here
-----------------------------------
-- Tournament selection: repeated random sampling and pick the best. Tournament size trades selection pressure (larger increases selection pressure).
-- Uniform crossover: for each gene index the offspring takes value either from `parent1` or `parent2` with 50% chance.
-- Gaussian mutation: for each gene, with probability `p = mutationRate`, add $\\mathcal{N}(0, \\sigma^2)$ where $\\sigma =$ `mutationStrength`, then clamp the gene to $[-1,1]`.
+---
 
-These operators implement a standard real-valued GA suitable for optimizing continuous parameters.
+#### `CheckpointFitnessFunction`
 
-5) Simulator motion & state update
-----------------------------------
-Motion and sensing are split across dedicated collaborators:
+Extends `DistanceScaledFitnessFunction` with an additional **proximity bonus** at every step: the robot is rewarded proportionally to how close it currently is to the next target cell's centre. This provides a dense gradient signal that helps the GA explore more effectively in early generations.
 
-- `MotionSimulatorPatched` — computes the deterministic update of the robot `State` given a previous `State` and a `Command` (left wheel speed, right wheel speed, duration). The `KheperaSimulator` uses `msp.getMovement(prevState, command)` to obtain a new `State`. The motion model is differential-drive: linear and angular increments are integrated (the code lives in `MotionSimulatorPatched.java`). The visualizer consumes these `State` objects for display.
+---
 
-- `SensorReadingSimulator` — given the robot's $(x,y,\\theta)$ and the environment obstacle list, it computes N simulated distance readings and simple line-under-sensor detection values. Distances are returned as integer-like doubles (the code uses sentinel ranges like >3500/3600 to indicate collisions). Sensor geometry is controlled by parameters such as `sensorAngle`, `obstacleDangerDistance`, and `robotRadius` in `KheperaSimulator`.
+#### `FlatFitnessFunction`
 
-Collision detection
--------------------
-The simulator performs collision checks both at discrete states and along interpolated trajectories to avoid tunneling. `KheperaSimulator.checkCollisionOnPath(...)` subdivides a `Command` duration into `numInterpolations` steps, queries `sim.getPath(...)` from `MotionSimulatorPatched` and checks each interpolated state for proximity to obstacles or sensor-indicated collisions.
+The simplest variant: fixed rewards/penalties per state with no distance scaling. Useful as a baseline but provides a coarser gradient for the GA.
 
-Data Handling
+---
 
-CSV inputs and normalization
----------------------------
-`DataLoader.loadData(...)` reads `circle_training_data.csv` (expected columns: x, y, left, right, duration), skips the header, and normalizes values using fixed maxima:
+#### `TimeTrialFitnessFunction`
 
-- Position normalization: divide by `MAX_POS = 35.0` → $x_{norm} = x / 35.0$.
-- Wheel speed normalization: divide by `MAX_SPEED = 14000.0` → $v_{norm} = v / 14000.0$.
-- Duration normalization: divide by `MAX_DURATION = 100.0` → $t_{norm} = t / 100.0$.
+Like `CheckpointFitnessFunction` but adds a **speed bonus** when a checkpoint is reached: arriving at a cell earlier in the N-step sequence yields a higher reward. This encourages compact, efficient circular paths.
 
-These normalized datapoints are stored as `DataPoint` instances and are the inputs/targets when evaluating an `FFNN` for supervised training or fitness calculation.
+---
 
-Predictions and playback
-------------------------
-The pipeline for playback is:
+### `KheperaSimulator.java` — The Physics Engine
 
-1. Use an evolved `FFNN` or an Encog-trained network to produce `predicted_outputs.csv` (columns match training format: x,y,left,right,duration but left/right/duration are predicted/normalized).
-2. `RunNetwork` reads `predicted_outputs.csv`, denormalizes wheel speeds and duration back to integer physical units and creates `Command` objects.
-3. `KheperaSimulator` executes these commands to produce states and a `VisualFrame` is used to animate the driven path.
+`KheperaSimulator` is the bridge between the FFNN controller and the physical world. It is responsible for:
 
-Required third-party components
-------------------------------
-- Encog Core 3.4: `encog-core-3.4.jar` — used by `NNSim` and any other code that loads/saves Encog `BasicNetwork` objects.
+1. Maintaining robot state (`State`: x, y, θ) across a sequence of commands
+2. Computing new states via `MotionSimulatorPatched`, which uses three trained Encog networks (`NNxuse.eg`, `NNyuse.eg`, `NNtuse.eg`) to predict differential-drive kinematics
+3. Optionally computing sensor readings via `SensorReadingSimulator`
+4. Returning `ArrayList<KheperaState>` — one entry per executed command, containing position and sensor data
+
+**Important:** `KheperaSimulator` is **stateful**. A fresh instance must be created for each individual evaluation to ensure the robot always starts from the same position (`State(-20, 20, 270)`).
+
+---
+
+## The N-Step Evaluation Loop
+
+This is the core of the neuroevolution system. For each individual (set of NN weights), the following procedure is carried out:
+
+```
+given: chromosome (33 genes), N (number of steps)
+
+1.  Load genes into FFNN via ffnn.setChromosome(genes)
+2.  Create a fresh KheperaSimulator at START_STATE (-20, 20, 270°)
+3.  currentX = START_STATE.sx
+    currentY = START_STATE.sy
+
+4.  For step = 1 to N:
+      a. Normalise position:
+             normX = currentX / MAX_POS    (MAX_POS = 35.0)
+             normY = currentY / MAX_POS
+
+      b. Fire FFNN:
+             double[] output = ffnn.fire(new double[]{normX, normY})
+             // output[0] = normalised leftSpeed  (0–1)
+             // output[1] = normalised rightSpeed (0–1)
+             // output[2] = normalised duration   (0–1)
+
+      c. Denormalise outputs:
+             leftSpeed  = clamp(output[0] × MAX_SPEED,  MIN_SPEED, MAX_SPEED)
+             rightSpeed = clamp(output[1] × MAX_SPEED,  MIN_SPEED, MAX_SPEED)
+             duration   = clamp(output[2] × MAX_DURATION, MIN_TIME, MAX_TIME)
+
+      d. Build and execute command:
+             Command cmd = new Command(leftSpeed, rightSpeed, duration)
+             ArrayList<KheperaState> states = sim.getKheperaState(commands_so_far)
+
+      e. Read new robot position from latest KheperaState:
+             currentX = states.getLast().position.sx
+             currentY = states.getLast().position.sy
+
+5.  Pass full states list to fitness function:
+        double fitness = DistanceScaledFitnessFunction.evaluate(states)
+
+6.  chromosome.setFitness(fitness)
+```
+
+Speed clamping constants (from `Code/Chromosome.java`):
+- `MIN_SPEED = 8000`, `MAX_SPEED = 17500`
+- `MIN_TIME = 300`, `MAX_TIME = 3100`
+
+**Why N steps?** A fixed step count per individual makes evaluation time predictable and comparable across the population. The value of N should be large enough that the robot can complete at least one full clockwise traversal of the grid (empirically, N = 10–20 is sufficient given the command durations involved).
+
+---
+
+## The Evolutionary Loop
+
+```
+Initialise population of P chromosomes with random genes in [-1, 1]
+
+For generation = 1 to G:
+
+    // Evaluate
+    For each chromosome in population:
+        run N-step simulation → score with fitness function
+        chromosome.setFitness(score)
+
+    // Sort (descending — best first)
+    EvolutionaryAlgorithm.sortByFitness(population)
+
+    // Log best fitness
+    Print generation, population[0].getFitness()
+
+    // Check termination
+    If population[0].getFitness() >= 480.0:  break (full traversal achieved)
+
+    // Build next generation
+    nextGen[0..ELITE_COUNT-1] = elitism(population, ELITE_COUNT)  // deepCopy
+    For i = ELITE_COUNT to P-1:
+        parent1 = tournamentSelect(population, TOURNAMENT_SIZE)
+        parent2 = tournamentSelect(population, TOURNAMENT_SIZE)
+        offspring = crossover(parent1, parent2)
+        GaussianMutation(offspring, MUTATION_RATE, MUTATION_STRENGTH)
+        nextGen[i] = offspring
+
+    population = nextGen
+
+// Visualise best result
+Collect trajectory states from best chromosome
+Display via VisualFrame
+```
+
+### Recommended Hyperparameters
+
+| Parameter | Value | Rationale |
+|---|---|---|
+| Population size | 150 | Balances diversity with evaluation speed |
+| Generations | 200 | Sufficient for convergence on circle |
+| N steps per individual | 10–20 | Enough to complete one full traversal |
+| Elite count | 2 | Preserves top solutions without stagnation |
+| Tournament size | 5 | Moderate selection pressure |
+| Mutation rate | 0.15 | Per-gene probability |
+| Mutation strength | 0.2 | Gaussian σ for weight perturbation |
+| Fitness function | `DistanceScaledFitnessFunction` | Best gradient signal for circular behaviour |
+
+---
+
+## Data Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     EVOLUTIONARY LOOP                       │
+│                                                             │
+│  Population of Chromosomes (each = 33 NN weights)          │
+│         │                                                   │
+│         ▼                                                   │
+│  ┌─────────────────────────┐                                │
+│  │   N-Step Evaluation     │  ← runs once per individual   │
+│  │                         │                                │
+│  │  (x,y) ──► FFNN.fire()  │                                │
+│  │         ──► Command     │                                │
+│  │         ──► Simulator   │                                │
+│  │         ──► new (x,y)   │                                │
+│  │  repeat N times         │                                │
+│  └─────────────────────────┘                                │
+│         │                                                   │
+│         ▼                                                   │
+│  FitnessFunction.evaluate(states)  →  score                 │
+│         │                                                   │
+│         ▼                                                   │
+│  Sort → Elitism → Tournament → Crossover → Mutation         │
+│         │                                                   │
+│         └──────────────────────────► Next Generation        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## What to Reuse vs. What to Build
+
+| Component | Action | Notes |
+|---|---|---|
+| `FFNN.java` | **Reuse as-is** | Already correct architecture (2 in, 5 hidden, 3 out) |
+| `Chromosome.java` (EvolutionaryRobotics) | **Reuse as-is** | Genome = 33 real-valued genes |
+| `EvolutionaryAlgorithm.java` (EvolutionaryRobotics) | **Reuse as-is** | All operators already implemented |
+| `DistanceScaledFitnessFunction.java` | **Reuse as-is** | Core scoring logic, no changes needed |
+| `KheperaSimulator.java` | **Reuse as-is** | Instantiate fresh per individual |
+| `Code/Main.java` | **Adapt** | Replace `Chromosome.createCommands()` with FFNN N-step loop |
+| `Code/Chromosome.java` | **Do not use** | This encodes raw commands, not NN weights |
+| `DataLoader` / `predicted_outputs.csv` | **Not needed** | Neuroevolution does not use supervised training data |
+| `VisualFrame.java` | **Reuse as-is** | Visualise best individual's trajectory after evolution |
+
+---
+
+## Key Differences from the Previous Systems
+
+| Aspect | Supervised NN (`src/Code/Main.java`) | Direct GA (`Code/Main.java`) | Neuroevolution (this system) |
+|---|---|---|---|
+| What evolves | NN weights (to minimise MSE) | Raw motor commands | NN weights (to maximise fitness) |
+| Fitness signal | Mean squared error vs. CSV data | Behavioural (grid traversal) | Behavioural (grid traversal) |
+| Simulator used? | No (offline, dataset only) | Yes | Yes |
+| Genome | `double[]` of 33 weights | `int[]` of speeds/durations | `double[]` of 33 weights |
+| Generalisation | Limited to seen positions | None | Generalises — the NN can react to any (x, y) |
+
+The neuroevolution approach is more powerful than the direct GA because the FFNN is a **closed-loop controller**: it reacts to the robot's actual position at every step, meaning if the robot drifts slightly off the ideal circle, the NN can correct its commands in the next step. The direct GA, by contrast, fires a fixed command sequence blindly regardless of where the robot actually ends up.
