@@ -1,6 +1,6 @@
 package simulator;
 
-import fitness.DistanceScaledFitnessFunction;
+import fitness.TimeTrialFitnessFunction;
 import ga.Chromosome;
 import ga.EvolutionaryAlgorithm;
 import nn.FFNN;
@@ -78,7 +78,7 @@ public class NeuroevolutionMain {
 
     private static double evaluateChromosome(Chromosome chromosome, FFNN ffnn) {
         ArrayList<KheperaState> states = runTrajectory(chromosome, ffnn);
-        return DistanceScaledFitnessFunction.evaluate(states);
+        return TimeTrialFitnessFunction.evaluate(states);
     }
 
     private static ArrayList<KheperaState> runTrajectory(Chromosome chromosome, FFNN ffnn) {
