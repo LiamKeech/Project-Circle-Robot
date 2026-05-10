@@ -42,9 +42,7 @@ public class NeuroevolutionMain {
             EvolutionaryAlgorithm.sortByFitness(population);
             Chromosome best = population[0];
 
-            if (gen % 10 == 0 || gen == GENERATIONS - 1) {
-                System.out.println("Generation " + gen + " | Best Fitness: " + best.getFitness());
-            }
+            System.out.println("Generation " + gen + " | Best Fitness: " + best.getFitness());
 
             if (best.getFitness() >= TARGET_FITNESS) {
                 break;
@@ -118,18 +116,7 @@ public class NeuroevolutionMain {
         }
 
         KheperaSimulator simulator = new KheperaSimulator(START_STATE);
-        VisualFrame visual = new VisualFrame(
-                50,
-                50,
-                1000,
-                1000,
-                new ArrayList<>(),
-                simulator.obstacleRadius,
-                new Point(0, 0),
-                new Point((int) START_STATE.sx, (int) START_STATE.sy),
-                simulator.targetRadius,
-                simulator.robotRadius
-        );
+        VisualFrame visual = new VisualFrame(50, 50, 1000, 1000, new ArrayList<>(), simulator.obstacleRadius, new Point(0, 0), new Point((int) START_STATE.sx, (int) START_STATE.sy), simulator.targetRadius, simulator.robotRadius);
         visual.setPath(path, message + "\nStates: " + path.size());
 
         Thread thread = new Thread(visual);
