@@ -34,11 +34,13 @@ public class NeuroevolutionMain {
         }
 
         for (int gen = 0; gen < GENERATIONS; gen++) {
+            // 1. Evaluate individuals
             for (Chromosome chromosome : population) {
                 double fitness = evaluateChromosome(chromosome, ffnn);
                 chromosome.setFitness(fitness);
             }
 
+            // 2. Sort by fitness
             EvolutionaryAlgorithm.sortByFitness(population);
             Chromosome best = population[0];
 
@@ -48,6 +50,7 @@ public class NeuroevolutionMain {
                 break;
             }
 
+            //3. Create the next generation
             population = nextGeneration(population);
         }
 
@@ -75,11 +78,15 @@ public class NeuroevolutionMain {
     }
 
     private static double evaluateChromosome(Chromosome chromosome, FFNN ffnn) {
+        /*
+            Simulate the trajectory for a chromosome and evaluate its fitness.
+         */
         ArrayList<KheperaState> states = runTrajectory(chromosome, ffnn);
         return TimeTrialFitnessFunction.evaluate(states);
     }
 
     private static ArrayList<KheperaState> runTrajectory(Chromosome chromosome, FFNN ffnn) {
+        // Loads genes into the FFNN
         ffnn.setChromosome(chromosome.getGenes());
         KheperaSimulator simulator = new KheperaSimulator(START_STATE);
         ArrayList<Command> commands = new ArrayList<>();
@@ -89,19 +96,22 @@ public class NeuroevolutionMain {
         double currentY = START_STATE.sy;
 
         for (int step = 0; step < STEPS_PER_INDIVIDUAL; step++) {
+            // Position is normalised and is fed into the neural network
             double normX = clamp(currentX / MAX_POS, -1.0, 1.0);
             double normY = clamp(currentY / MAX_POS, -1.0, 1.0);
-
             double[] outputs = ffnn.fire(new double[]{normX, normY});
 
+            // Three outputs are denormalised back into commands
             int left = (int) Math.round(clamp(MIN_SPEED + outputs[0] * (MAX_SPEED - MIN_SPEED), MIN_SPEED, MAX_SPEED));
             int right = (int) Math.round(clamp(MIN_SPEED + outputs[1] * (MAX_SPEED - MIN_SPEED), MIN_SPEED, MAX_SPEED));
             int time = (int) Math.round(clamp(MIN_TIME + outputs[2] * (MAX_TIME - MIN_TIME), MIN_TIME, MAX_TIME));
-
             commands.add(new Command(left, right, time));
-            states = simulator.getKheperaState(commands);
 
+            // Call simulator, compute the new state
+            states = simulator.getKheperaState(commands);
             KheperaState last = states.get(states.size() - 1);
+
+            // Update position
             currentX = last.position.sx;
             currentY = last.position.sy;
         }
@@ -111,8 +121,8 @@ public class NeuroevolutionMain {
 
     private static void showTrajectory(ArrayList<KheperaState> states, String message) {
         ArrayList<State> path = new ArrayList<>();
-        for (KheperaState kstate : states) {
-            path.add(kstate.position);
+        for (KheperaState state : states) {
+            path.add(state.position);
         }
 
         KheperaSimulator simulator = new KheperaSimulator(START_STATE);

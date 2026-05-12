@@ -46,16 +46,17 @@ public class TimeTrialFitnessFunction {
         int totalStates = states.size();
 
         for (int i = 0; i < states.size(); i++) {
+            // Convert states to grid cell IDs
             KheperaState state = states.get(i);
             double x = state.position.sx;
             double y = state.position.sy;
             int cellID = GridCellMap.getBlockID(x, y);
 
-            if (cellID == -1) {
+            if (cellID == -1) { // 1. Outside the valid grid, penalty grows with distance
                 double distanceOutsideGrid = distanceOutsideGrid(x, y);
                 fitness -= outsidePenalty * (1 + distanceOutsideGrid / gridWidth);
 
-            } else if (cellID == 4) {
+            } else if (cellID == 4) { // 2. In the centre cell, penalty grows as it gets closer to the centre
                 double distanceFromCentre = distanceFromCentre(x, y);
                 fitness -= centrePenalty * (1 - (distanceFromCentre / cellWidth));
 
@@ -63,21 +64,21 @@ public class TimeTrialFitnessFunction {
                 if (nextCellIdx < clockwiseOrder.length) {
                     int targetCell = clockwiseOrder[nextCellIdx];
                     double distance = distanceToCheckpoint(x, y, targetCell);
-                    fitness += proximityReward * (1.0 - distance / maxDistance);
+                    fitness += proximityReward * (1.0 - distance / maxDistance); // 3. Reward progress to checkpoint
 
-                    double proximityBonus = proximityReward * (1 - (distance / maxDistance));
+                    double proximityBonus = proximityReward * (1 - (distance / maxDistance)); // 4. Reward grows as it gets closer to the centre
                     fitness += proximityBonus;
                 }
 
-                if (nextCellIdx < clockwiseOrder.length && cellID == clockwiseOrder[nextCellIdx]) {
-                    fitness += cellReward;
+                if (nextCellIdx < clockwiseOrder.length && cellID == clockwiseOrder[nextCellIdx]) { //Check that there are still cells left, and that the robot is in the right cell
+                    fitness += cellReward; // 5. Reward for entering the right cell
 
                     double speedFactor = 1.0 - ((double) i / totalStates); // Higher reward for reaching checkpoints earlier in the sequence
                     fitness += speedReward * speedFactor;
 
                     nextCellIdx++;
                     if (nextCellIdx == clockwiseOrder.length) {
-                        fitness += traversalReward;
+                        fitness += traversalReward; // 6. Reward if all checkpoints are completed
                         return fitness;
                     }
                 }

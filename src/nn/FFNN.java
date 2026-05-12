@@ -5,10 +5,10 @@ public class FFNN {
     private final int numHidden = 5;
     private final int numOutputs = 3;
 
-    private final double[][] hiddenWeights;
-    private final double[] hiddenBiases;
-    private final double[][] outputWeights;
-    private final double[] outputBiases;
+    private final double[][] hiddenWeights; // 2x5 matrix
+    private final double[] hiddenBiases;    // 5 values
+    private final double[][] outputWeights; // 5x3 matrix
+    private final double[] outputBiases;    // 3 values
 
     public FFNN() {
         hiddenWeights = new double[numInputs][numHidden];
@@ -18,10 +18,16 @@ public class FFNN {
     }
 
     public int getChromosomeLength() {
+        /*
+        Flat gene = (Input-Hidden Weights) + (Hidden Biases) + (Hidden-Output Weights) + (Output Biases)
+         */
         return (numInputs * numHidden) + numHidden + (numHidden * numOutputs) + numOutputs;
     }
 
     public void setChromosome(double[] genes) {
+        /*
+        Map the flat gene array to the FFNN's weights and biases
+         */
         int index = 0;
 
         // 1. Input to Hidden Weights
@@ -68,15 +74,6 @@ public class FFNN {
             finalOutputs[j] = sigmoid(sum);
         }
         return finalOutputs;
-    }
-
-    public double calculateError(double[] predicted, double[] expected) {
-        double sumSquareError = 0.0;
-        for (int i = 0; i < predicted.length; i++) {
-            double diff = expected[i] - predicted[i];
-            sumSquareError += diff * diff;
-        }
-        return sumSquareError / predicted.length;
     }
 
     private double sigmoid(double x) {

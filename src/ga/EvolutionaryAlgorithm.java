@@ -11,6 +11,9 @@ public class EvolutionaryAlgorithm {
     }
 
     public static Chromosome[] elitism(Chromosome[] population, int eliteCount) {
+        /*
+        Sort the population by fitness and return the top individuals as elites for the next generation.
+         */
         sortByFitness(population);
         Chromosome[] elites = new Chromosome[eliteCount];
 
@@ -21,6 +24,9 @@ public class EvolutionaryAlgorithm {
     }
 
     public static Chromosome tournamentSelect(Chromosome[] population, int tournamentSize) {
+        /*
+        Randomly select individuals from the population and return the one with the highest fitness.
+         */
         Random rand = new Random();
         Chromosome best = null;
 
@@ -34,6 +40,9 @@ public class EvolutionaryAlgorithm {
     }
 
     public static Chromosome crossover(Chromosome parent1, Chromosome parent2) {
+        /*
+        Uniform crossover: Each gene in the offspring is randomly selected from either parent with equal probability.
+         */
         Random rand = new Random();
         double[] parent1Genes = parent1.getGenes();
         double[] parent2Genes = parent2.getGenes();
@@ -47,6 +56,10 @@ public class EvolutionaryAlgorithm {
     }
 
     public static void GaussianMutation(Chromosome chromosome, double mutationRate, double mutationStrength) {
+        /*
+        mutationRate: Probability of each gene being mutated
+        mutationStrength: Standard deviation of the Gaussian noise added to the gene
+         */
         Random rand = new Random();
         double[] genes = chromosome.getGenes();
 
