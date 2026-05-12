@@ -86,7 +86,11 @@ public class NeuroevolutionMain {
     }
 
     private static ArrayList<KheperaState> runTrajectory(Chromosome chromosome, FFNN ffnn) {
-        // Loads genes into the FFNN
+        /*
+            Runs the simulation for a specific chromosome
+         */
+
+        // Load genes from the chromosome into the neural network & initialise simulator
         ffnn.setChromosome(chromosome.getGenes());
         KheperaSimulator simulator = new KheperaSimulator(START_STATE);
         ArrayList<Command> commands = new ArrayList<>();
@@ -96,15 +100,19 @@ public class NeuroevolutionMain {
         double currentY = START_STATE.sy;
 
         for (int step = 0; step < STEPS_PER_INDIVIDUAL; step++) {
-            // Position is normalised and is fed into the neural network
+            // Ensure X,Y in the range of -1 to 1 for neural network input
             double normX = clamp(currentX / MAX_POS, -1.0, 1.0);
             double normY = clamp(currentY / MAX_POS, -1.0, 1.0);
+
+            // Normalised X and Y are fed into the neural network
             double[] outputs = ffnn.fire(new double[]{normX, normY});
 
-            // Three outputs are denormalised back into commands
-            int left = (int) Math.round(clamp(MIN_SPEED + outputs[0] * (MAX_SPEED - MIN_SPEED), MIN_SPEED, MAX_SPEED));
-            int right = (int) Math.round(clamp(MIN_SPEED + outputs[1] * (MAX_SPEED - MIN_SPEED), MIN_SPEED, MAX_SPEED));
-            int time = (int) Math.round(clamp(MIN_TIME + outputs[2] * (MAX_TIME - MIN_TIME), MIN_TIME, MAX_TIME));
+            // Three outputs are scaled up to the robot's limits
+            int left = (int) Math.round(clamp(lerp(MIN_SPEED, MAX_SPEED, outputs[0]), MIN_SPEED, MAX_SPEED));
+            int right = (int) Math.round(clamp(lerp(MIN_SPEED, MAX_SPEED, outputs[1]), MIN_SPEED, MAX_SPEED));
+            int time = (int) Math.round(clamp(lerp(MIN_TIME, MAX_TIME, outputs[2]), MIN_TIME, MAX_TIME));
+
+            // Create a new command with the parameters
             commands.add(new Command(left, right, time));
 
             // Call simulator, compute the new state
@@ -116,7 +124,7 @@ public class NeuroevolutionMain {
             currentY = last.position.sy;
         }
 
-        return states;
+        return states; // list of states after 15 commands (per chromosome)
     }
 
     private static void showTrajectory(ArrayList<KheperaState> states, String message) {
@@ -134,7 +142,19 @@ public class NeuroevolutionMain {
     }
 
     private static double clamp(double value, double min, double max) {
+        /*
+            Clamp a value between a minimum and maximum range
+            1. Scale number down (normalise) or up (denormalise)
+            2. Ensure the numbers never fall outside a specific boundary
+         */
         return Math.max(min, Math.min(max, value));
+    }
+
+    private static double lerp(double min, double max, double rate) {
+        /*
+            Linear interpolation between min and max based on a rate (0 to 1)
+         */
+        return min + rate * (max - min);
     }
 }
 
