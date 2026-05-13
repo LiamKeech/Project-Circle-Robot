@@ -104,8 +104,13 @@ public class NeuroevolutionMain {
             double normX = clamp(currentX / MAX_POS, -1.0, 1.0);
             double normY = clamp(currentY / MAX_POS, -1.0, 1.0);
 
-            // Normalised X and Y are fed into the neural network
-            double[] outputs = ffnn.fire(new double[]{normX, normY});
+            KheperaState last = states.get(states.size() - 1);
+            double thetaRad = Math.toRadians(last.position.sa);
+            double sinTheta = Math.sin(thetaRad);
+            double cosTheta = Math.cos(thetaRad);
+
+            // Normalised X, Y, and orientation are fed into the neural network
+            double[] outputs = ffnn.fire(new double[]{normX, normY, sinTheta, cosTheta});
 
             // Three outputs are scaled up to the robot's limits
             int left = (int) Math.round(clamp(lerp(MIN_SPEED, MAX_SPEED, outputs[0]), MIN_SPEED, MAX_SPEED));
@@ -117,11 +122,11 @@ public class NeuroevolutionMain {
 
             // Call simulator, compute the new state
             states = simulator.getKheperaState(commands);
-            KheperaState last = states.get(states.size() - 1);
+            KheperaState lastState = states.get(states.size() - 1);
 
             // Update position
-            currentX = last.position.sx;
-            currentY = last.position.sy;
+            currentX = lastState.position.sx;
+            currentY = lastState.position.sy;
         }
 
         return states; // list of states after 15 commands (per chromosome)
