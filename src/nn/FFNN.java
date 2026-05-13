@@ -1,7 +1,7 @@
 package nn;
 
 public class FFNN {
-    private final int numInputs = 2;
+    private final int numInputs = 1;
     private final int numHidden = 5;
     private final int numOutputs = 3;
 

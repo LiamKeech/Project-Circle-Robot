@@ -98,20 +98,22 @@ public class NeuroevolutionMain {
 
         double currentX = START_STATE.sx;
         double currentY = START_STATE.sy;
+        double orientation = START_STATE.sa;
+        int totaltime = 0;
 
         for (int step = 0; step < STEPS_PER_INDIVIDUAL; step++) {
             // Ensure X,Y in the range of -1 to 1 for neural network input
-            double normX = clamp(currentX / MAX_POS, -1.0, 1.0);
-            double normY = clamp(currentY / MAX_POS, -1.0, 1.0);
+            //double normX = clamp(currentX / MAX_POS, -1.0, 1.0);
+            //double normY = clamp(currentY / MAX_POS, -1.0, 1.0);
+            //double orientation = orientation / MAX_POS, -1.0, 1.0);
 
-            // Normalised X and Y are fed into the neural network
-            double[] outputs = ffnn.fire(new double[]{normX, normY});
+            double[] outputs = ffnn.fire(new double[]{totaltime});//ffnn.fire(new double[]{totaltime});//ffnn.fire(new double[]{normX, normY});
 
             // Three outputs are scaled up to the robot's limits
             int left = (int) Math.round(clamp(lerp(MIN_SPEED, MAX_SPEED, outputs[0]), MIN_SPEED, MAX_SPEED));
             int right = (int) Math.round(clamp(lerp(MIN_SPEED, MAX_SPEED, outputs[1]), MIN_SPEED, MAX_SPEED));
             int time = (int) Math.round(clamp(lerp(MIN_TIME, MAX_TIME, outputs[2]), MIN_TIME, MAX_TIME));
-
+            totaltime += time;
             // Create a new command with the parameters
             commands.add(new Command(left, right, time));
 
@@ -122,6 +124,7 @@ public class NeuroevolutionMain {
             // Update position
             currentX = last.position.sx;
             currentY = last.position.sy;
+            orientation = last.position.sa;
         }
 
         return states; // list of states after 15 commands (per chromosome)
